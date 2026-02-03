@@ -2,6 +2,12 @@ enable_testing()
 
 include(${CMAKE_SOURCE_DIR}/cmake/apply_default_settings.cmake)
 
+# Find Opus library for voice chat
+find_package(Opus CONFIG REQUIRED)
+
+# Add library directory for Opus
+link_directories(${CMAKE_BINARY_DIR}/vcpkg_installed/x64-windows-sp/lib)
+
 #
 # MpClientPlugin
 #
@@ -12,6 +18,7 @@ if(WIN32)
   add_library(MpClientPlugin SHARED ${src})
   target_link_libraries(MpClientPlugin PUBLIC mp_common)
   target_link_libraries(MpClientPlugin PUBLIC server_guest_lib) # For Inventory.cpp, required by messages
+  target_link_libraries(MpClientPlugin PUBLIC Opus::opus) # Voice chat support
   set_target_properties(MpClientPlugin PROPERTIES OUTPUT_NAME "MpClientPlugin")
   apply_default_settings(TARGETS MpClientPlugin)
   list(APPEND VCPKG_DEPENDENT MpClientPlugin)
@@ -46,6 +53,7 @@ add_library(mp_common STATIC ${src})
 target_compile_definitions(mp_common PUBLIC MAX_PLAYERS=1000)
 target_include_directories(mp_common PUBLIC "${CMAKE_CURRENT_LIST_DIR}/mp_common")
 target_link_libraries(mp_common PUBLIC messages viet)
+target_link_libraries(mp_common PUBLIC Opus::opus) # Voice chat support
 apply_default_settings(TARGETS mp_common)
 list(APPEND VCPKG_DEPENDENT mp_common)
 if(WIN32)
@@ -119,6 +127,8 @@ find_package(libzippp REQUIRED)
 
 find_package(antigo REQUIRED)
 
+find_package(opus CONFIG REQUIRED)
+
 foreach(target ${VCPKG_DEPENDENT})
   target_include_directories(${target} PUBLIC ${CATCH_INCLUDE_DIR})
   target_include_directories(${target} PUBLIC ${JSON_INCLUDE_DIR})
@@ -128,6 +138,8 @@ foreach(target ${VCPKG_DEPENDENT})
   target_link_libraries(${target} PUBLIC SLikeNet)
 
   target_link_libraries(${target} PUBLIC antigo::antigo)
+
+  target_link_libraries(${target} PUBLIC opus)
 
   target_link_libraries(${target} PUBLIC ZLIB::ZLIB)
 

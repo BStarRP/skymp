@@ -8,6 +8,8 @@
 #include "RawMessageData.h"
 #include "SpellCastData.h"
 #include "SweetHidePlayerNamesService.h"
+#include "VoiceChatMessage.h"
+#include "UpdateVoiceChatMessage.h"
 #include "libespm/Loader.h"
 #include <memory>
 
@@ -80,6 +82,12 @@ public:
 
   virtual void OnSpellCast(const RawMessageData& rawMsgData,
                            const SpellCastMessage& msg);
+
+  virtual void OnVoiceChat(const RawMessageData& rawMsgData,
+                           const VoiceChatMessage& msg);
+
+  virtual void OnUpdateVoiceChat(const RawMessageData& rawMsgData,
+                                 const UpdateVoiceChatMessage& msg);
 
   virtual void OnUnknown(const RawMessageData& rawMsgData);
 

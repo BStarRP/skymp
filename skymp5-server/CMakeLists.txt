@@ -8,6 +8,12 @@ include(${CMAKE_SOURCE_DIR}/cmake/yarn.cmake)
 
 find_package(CMakeRC CONFIG REQUIRED)
 
+# Find Opus library for voice chat
+find_package(Opus CONFIG REQUIRED)
+
+# Add library directory for Opus
+link_directories(${CMAKE_BINARY_DIR}/vcpkg_installed/x64-windows-sp/lib)
+
 if(WIN32)
   yarn_execute_command(
     COMMAND install
@@ -60,6 +66,7 @@ if(NOT EMSCRIPTEN)
   endif()
 
   target_link_libraries(${PROJECT_NAME} PRIVATE mp_common server_guest_lib localization-provider)
+  target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR}/vcpkg_installed/x64-windows-sp/lib/opus.lib) # Voice chat support
   list(APPEND VCPKG_DEPENDENT ${PROJECT_NAME})
   apply_default_settings(TARGETS ${PROJECT_NAME})
 endif()

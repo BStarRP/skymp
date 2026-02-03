@@ -5,6 +5,7 @@
 #include "JsonUtils.h"
 #include "MessageSerializerFactory.h"
 #include "Messages.h"
+#include "MinPacketId.h"
 #include "MpActor.h"
 #include "MsgType.h"
 #include "SpellCastData.h"
@@ -38,6 +39,26 @@ void PacketParser::TransformPacketIntoAction(Networking::UserId userId,
     length,
     userId,
   };
+
+  // Handle binary voice packets first
+  if (length >= 9 && data[0] == Networking::BinaryVoicePacketId) {
+    // Extract voice packet data: [PacketId:1][SpeakerId:4][DataSize:4][AudioData:...]
+    uint32_t speakerId;
+    uint32_t dataSize;
+    memcpy(&speakerId, &data[1], 4);
+    memcpy(&dataSize, &data[5], 4);
+
+    if (length == 9 + dataSize) {
+      // Create VoiceChatMessage and delegate to ActionListener
+      VoiceChatMessage voiceMsg;
+      voiceMsg.data.audioData.resize(dataSize);
+      memcpy(voiceMsg.data.audioData.data(), &data[9], dataSize);
+      voiceMsg.data.speakerId = speakerId;
+
+      actionListener.OnVoiceChat(rawMsgData, voiceMsg);
+    }
+    return;
+  }
 
   auto result = pImpl->serializer->Deserialize(data, length);
   if (result != std::nullopt) {
@@ -172,6 +193,18 @@ void PacketParser::TransformPacketIntoAction(Networking::UserId userId,
           reinterpret_cast<PlayerBowShotMessage*>(result->message.get());
         actionListener.OnPlayerBowShot(rawMsgData, *message);
         break;
+      }
+      case MsgType::VoiceChatMessage: {
+        auto message =
+          reinterpret_cast<VoiceChatMessage*>(result->message.get());
+        actionListener.OnVoiceChat(rawMsgData, *message);
+        return;
+      }
+      case MsgType::UpdateVoiceChatMessage: {
+        auto message =
+          reinterpret_cast<UpdateVoiceChatMessage*>(result->message.get());
+        actionListener.OnUpdateVoiceChat(rawMsgData, *message);
+        return;
       }
       default: {
         spdlog::error("PacketParser.cpp doesn't implement MsgType {}",

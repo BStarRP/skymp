@@ -65,6 +65,7 @@ export interface CreateActorMessageAdditionalProps {
     magickaPercentage?: number;
     templateChain?: number[];
     inventory?: Inventory;
+    isTalking?: boolean;
 
     isDead?: boolean; // TODO: take a look why doubles CreateActorMessageMainProps
 }

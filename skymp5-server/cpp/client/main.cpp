@@ -80,4 +80,24 @@ __declspec(dllexport) void SendRaw(const void* data, size_t size,
 {
   return MpClientPlugin::SendRaw(GetState(), data, size, reliable);
 }
+
+__declspec(dllexport) void InitVoiceChat()
+{
+  return MpClientPlugin::InitVoiceChat(GetState());
+}
+
+__declspec(dllexport) void StartTalking()
+{
+  return MpClientPlugin::StartTalking(GetState());
+}
+
+__declspec(dllexport) void StopTalking()
+{
+  return MpClientPlugin::StopTalking(GetState());
+}
+
+__declspec(dllexport) void OnReceiveVoiceData(uint32_t speakerId, const uint8_t* audioData, size_t dataSize, float x, float y, float z)
+{
+  return MpClientPlugin::OnReceiveVoiceData(GetState(), speakerId, audioData, dataSize, x, y, z);
+}
 }

@@ -18,6 +18,8 @@
     "libzippp",
     "cpptrace",
     "antigo",
+    "opus",
+    "miniaudio",
     "slikenet",
     "libsodium",
     {

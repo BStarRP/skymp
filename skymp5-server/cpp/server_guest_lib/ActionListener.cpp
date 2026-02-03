@@ -1083,6 +1083,61 @@ void ActionListener::OnSpellCast(const RawMessageData& rawMsgData,
   // Previous attempt was not successful, so it was deleted.
 }
 
+void ActionListener::OnVoiceChat(const RawMessageData& rawMsgData,
+                                 const VoiceChatMessage& msg)
+{
+  MpActor* myActor = partOne.serverState.ActorByUser(rawMsgData.userId);
+  if (!myActor) {
+    spdlog::error("ActionListener::OnVoiceChat - no Actor attached to userId {}", rawMsgData.userId);
+    return;
+  }
+
+  // Broadcast voice data to nearby players within hearing range (configurable distance)
+  const float kVoiceChatRange = 1000.0f; // Units in Skyrim distance
+  const NiPoint3& speakerPos = myActor->GetPos();
+  const FormDesc& speakerCellOrWorld = myActor->GetCellOrWorld();
+
+  // Create UpdateVoiceChatMessage with position data
+  UpdateVoiceChatMessage updateMsg;
+  updateMsg.data.isTalking = msg.data.isTalking;
+  updateMsg.data.audioData = msg.data.audioData;
+  updateMsg.data.speakerId = msg.data.speakerId;
+  updateMsg.data.position[0] = speakerPos.x;
+  updateMsg.data.position[1] = speakerPos.y;
+  updateMsg.data.position[2] = speakerPos.z;
+  updateMsg.data.worldOrCell = speakerCellOrWorld.ToFormId(partOne.worldState.espmFiles);
+
+  // Find all actors in the same cell/world within range
+  for (auto listener : myActor->GetActorListeners()) {
+    auto targetUserId = partOne.serverState.UserByActor(listener);
+    if (targetUserId == Networking::InvalidUserId || targetUserId == rawMsgData.userId) {
+      continue; // Skip invalid users and self
+    }
+
+    const NiPoint3& listenerPos = listener->GetPos();
+    const FormDesc& listenerCellOrWorld = listener->GetCellOrWorld();
+
+    // Check if in same cell/world
+    if (speakerCellOrWorld != listenerCellOrWorld) {
+      continue;
+    }
+
+    // Check distance
+    float sqrDistance = (speakerPos - listenerPos).SqrLength();
+    if (sqrDistance <= kVoiceChatRange * kVoiceChatRange) {
+      partOne.GetSendTarget().Send(targetUserId, updateMsg, false); // Use unreliable for low latency
+    }
+  }
+}
+
+void ActionListener::OnUpdateVoiceChat(const RawMessageData& rawMsgData,
+                                       const UpdateVoiceChatMessage& msg)
+{
+  // This is typically sent by the server to clients, so this handler might not be used
+  // But included for completeness
+  spdlog::debug("ActionListener::OnUpdateVoiceChat - Received voice chat update from user {}", rawMsgData.userId);
+}
+
 void ActionListener::OnUnknown(const RawMessageData& rawMsgData)
 {
   spdlog::warn("ActionListener::OnUnknown - Got unhandled message");

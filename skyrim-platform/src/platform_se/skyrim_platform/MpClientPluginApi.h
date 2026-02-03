@@ -10,6 +10,12 @@ Napi::Value Tick(const Napi::CallbackInfo& info);
 Napi::Value Send(const Napi::CallbackInfo& info);
 Napi::Value SendRaw(const Napi::CallbackInfo& args);
 
+// Voice Chat Functions
+Napi::Value InitVoiceChat(const Napi::CallbackInfo& info);
+Napi::Value StartTalking(const Napi::CallbackInfo& info);
+Napi::Value StopTalking(const Napi::CallbackInfo& info);
+Napi::Value OnReceiveVoiceData(const Napi::CallbackInfo& info);
+
 inline void Register(Napi::Env env, Napi::Object& exports)
 {
   auto mpClientPlugin = Napi::Object::New(env);
@@ -32,6 +38,18 @@ inline void Register(Napi::Env env, Napi::Object& exports)
   mpClientPlugin.Set(
     "sendRaw",
     Napi::Function::New(env, NapiHelper::WrapCppExceptions(SendRaw)));
+  mpClientPlugin.Set(
+    "initVoiceChat",
+    Napi::Function::New(env, NapiHelper::WrapCppExceptions(InitVoiceChat)));
+  mpClientPlugin.Set(
+    "startTalking",
+    Napi::Function::New(env, NapiHelper::WrapCppExceptions(StartTalking)));
+  mpClientPlugin.Set(
+    "stopTalking",
+    Napi::Function::New(env, NapiHelper::WrapCppExceptions(StopTalking)));
+  mpClientPlugin.Set(
+    "onReceiveVoiceData",
+    Napi::Function::New(env, NapiHelper::WrapCppExceptions(OnReceiveVoiceData)));
   exports.Set("mpClientPlugin", mpClientPlugin);
 }
 }

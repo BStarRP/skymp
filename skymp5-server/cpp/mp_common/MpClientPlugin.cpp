@@ -2,6 +2,7 @@
 
 #include "MessageSerializerFactory.h"
 #include "MsgType.h"
+#include "MinPacketId.h"
 #include <FileUtils.h>
 #include <nlohmann/json.hpp>
 #include <slikenet/BitStream.h>
@@ -111,4 +112,53 @@ void MpClientPlugin::SendRaw(State& state, const void* data, size_t size,
 
   state.cl->Send(reinterpret_cast<Networking::PacketData>(data), size,
                  reliable);
+}
+
+void MpClientPlugin::InitVoiceChat(State& state)
+{
+  // Set up voice data callback to send voice data over the network
+  state.voiceChatManager.Initialize([&state](bool isTalking, const std::vector<uint8_t>& audioData) {
+    if (state.cl && isTalking && !audioData.empty()) {
+      // Create binary packet with voice data
+      std::vector<uint8_t> packet;
+      packet.push_back(Networking::BinaryVoicePacketId);
+
+      // Add speaker ID (4 bytes) - use 0x14 as placeholder for player
+      uint32_t speakerId = 0x14;
+      packet.resize(packet.size() + 4);
+      memcpy(&packet[1], &speakerId, 4);
+
+      // Add data size (4 bytes)
+      packet.resize(packet.size() + 4);
+      uint32_t size32 = static_cast<uint32_t>(audioData.size());
+      memcpy(&packet[5], &size32, 4);
+
+      // Add audio data
+      packet.resize(packet.size() + audioData.size());
+      memcpy(&packet[9], audioData.data(), audioData.size());
+
+      // Send as unreliable for low latency
+      state.cl->Send(reinterpret_cast<Networking::PacketData>(packet.data()), packet.size(), false);
+    }
+  });
+}
+
+void MpClientPlugin::StartTalking(State& state)
+{
+  state.voiceChatManager.StartTalking();
+}
+
+void MpClientPlugin::StopTalking(State& state)
+{
+  state.voiceChatManager.StopTalking();
+}
+
+void MpClientPlugin::OnReceiveVoiceData(State& state, uint32_t speakerId, const uint8_t* audioData, size_t dataSize, float x, float y, float z)
+{
+  // Convert parameters to match VoiceChatManager interface
+  std::vector<uint8_t> audioVector(audioData, audioData + dataSize);
+  std::array<float, 3> speakerPosition = {x, y, z};
+  std::array<float, 3> listenerPosition = {0.0f, 0.0f, 0.0f}; // TODO: Get actual listener position
+
+  state.voiceChatManager.OnReceiveVoiceData(speakerId, audioVector, speakerPosition, listenerPosition);
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include "Networking.h"
+#include "VoiceChatManager.h"
 #include <cstdint>
 #include <slikenet/types.h>
 
@@ -10,6 +11,7 @@ typedef void (*OnPacket)(int32_t type, const char* rawContent, size_t length,
 struct State
 {
   std::shared_ptr<Networking::IClient> cl;
+  VoiceChatManager voiceChatManager;
 };
 
 typedef void (*SerializeMessage)(const char* jsonContent,
@@ -25,4 +27,10 @@ void Tick(State& st, OnPacket onPacket,
 void Send(State& st, const char* jsonContent, bool reliable,
           SerializeMessage serializeMessageFn);
 void SendRaw(State& st, const void* data, size_t size, bool reliable);
+
+// Voice Chat Functions
+void InitVoiceChat(State& st);
+void StartTalking(State& st);
+void StopTalking(State& st);
+void OnReceiveVoiceData(State& st, uint32_t speakerId, const uint8_t* audioData, size_t dataSize, float x, float y, float z);
 };

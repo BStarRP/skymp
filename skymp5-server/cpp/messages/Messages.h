@@ -32,6 +32,8 @@
 #include "UpdateGameModeDataMessage.h"
 #include "UpdateMovementMessage.h"
 #include "UpdatePropertyMessage.h"
+#include "VoiceChatMessage.h"
+#include "UpdateVoiceChatMessage.h"
 
 #define REGISTER_MESSAGES                                                     \
   REGISTER_MESSAGE(ActivateMessage)                                           \
@@ -66,4 +68,6 @@
   REGISTER_MESSAGE(UpdateAnimVariablesMessage)                                \
   REGISTER_MESSAGE(UpdateAppearanceMessage)                                   \
   REGISTER_MESSAGE(UpdateGameModeDataMessage)                                 \
-  REGISTER_MESSAGE(CreateActorMessage)
+  REGISTER_MESSAGE(CreateActorMessage)                                        \
+  REGISTER_MESSAGE(VoiceChatMessage)                                          \
+  REGISTER_MESSAGE(UpdateVoiceChatMessage)

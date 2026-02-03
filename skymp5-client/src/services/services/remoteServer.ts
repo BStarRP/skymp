@@ -59,9 +59,12 @@ import {
 } from '../../view/worldViewMisc';
 import { TimeService } from './timeService';
 import { logTrace, logError } from '../../logging';
+import { VoiceChatService } from './voiceChatService';
 
 import { SpellCastMessage } from '../messages/spellCastMessage';
 import { UpdateAnimVariablesMessage } from '../messages/updateAnimVariablesMessage';
+import { VoiceChatMessage } from '../messages/voiceChatMessage';
+import { UpdateVoiceChatMessage } from '../messages/updateVoiceChatMessage';
 import { MsgType } from '../../messages';
 
 export const getPcInventory = (): Inventory | undefined => {
@@ -123,6 +126,8 @@ export class RemoteServer extends ClientListener {
 
     this.controller.emitter.on("spellCastMessage", (e) => this.onSpellCastMessage(e));
     this.controller.emitter.on("updateAnimVariablesMessage", (e) => this.onUpdateAnimVariablesMessage(e));
+    this.controller.emitter.on("voiceChatMessage", (e) => this.onVoiceChatMessage(e));
+    this.controller.emitter.on("updateVoiceChatMessage", (e) => this.onUpdateVoiceChatMessage(e));
 
   }
 
@@ -987,6 +992,46 @@ export class RemoteServer extends ClientListener {
         logError(this, 'Failed apply AnimationVariables to actor with id: ' + ac.getFormID().toString(16));
       }
     });
+  }
+
+  private onVoiceChatMessage(event: ConnectionMessage<VoiceChatMessage>): void {
+    const msg = event.message;
+
+    // Update form model with isTalking state
+    const speakerForm = this.worldModel.forms.find(f => f && f.refrId === msg.data.speakerId);
+    if (speakerForm) {
+      speakerForm.isTalking = msg.data.isTalking;
+    }
+
+    // Forward to VoiceChatService for processing
+    const voiceChatService = this.controller.lookupListener(VoiceChatService);
+    if (voiceChatService) {
+      const audioData = new Uint8Array(msg.data.audioData);
+      voiceChatService.onReceiveVoiceData(msg.data.speakerId, audioData.buffer, 0, 0, 0);
+    }
+  }
+
+  private onUpdateVoiceChatMessage(event: ConnectionMessage<UpdateVoiceChatMessage>): void {
+    const msg = event.message;
+
+    // Update form model with isTalking state
+    const speakerForm = this.worldModel.forms.find(f => f && f.refrId === msg.data.speakerId);
+    if (speakerForm) {
+      speakerForm.isTalking = msg.data.isTalking;
+    }
+
+    // Forward to VoiceChatService with 3D position data
+    const voiceChatService = this.controller.lookupListener(VoiceChatService);
+    if (voiceChatService) {
+      const audioData = new Uint8Array(msg.data.audioData);
+      voiceChatService.onReceiveVoiceData(
+        msg.data.speakerId,
+        audioData.buffer,
+        msg.data.position[0], // x
+        msg.data.position[1], // y
+        msg.data.position[2]  // z
+      );
+    }
   }
 
   private numSetInventory = 0;

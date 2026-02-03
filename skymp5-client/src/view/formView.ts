@@ -562,6 +562,8 @@ export class FormView {
         const textXPos = Math.round(headScreenPos[0] * resolution.width);
         const textYPos = Math.round((1 - headScreenPos[1]) * resolution.height);
 
+        const isTalkingText = model?.isTalking ? "Speaking" : "";
+
         if (!this.textNameId && headScreenPos[2] > 0) {
           this.textNameId = createText(textXPos, textYPos, refr.getDisplayName(), [1, 1, 1, 0.8]);
           setTextSize(this.textNameId, 0.5);
@@ -576,6 +578,15 @@ export class FormView {
           }
           if (this.textNameId) {
             setTextPos(this.textNameId, textXPos, textYPos);
+          }
+        }
+        if (!this.voiceIndicatorId) {
+          this.voiceIndicatorId = createText(textXPos, textYPos - 35, "", [1, 0.85, 0.2, 0.8]);
+          setTextSize(this.voiceIndicatorId, 0.4);
+        } else {
+          if (this.voiceIndicatorId) {
+            setTextString(this.voiceIndicatorId, headScreenPos[2] >= 0 ? isTalkingText : "");
+            setTextPos(this.voiceIndicatorId, textXPos, textYPos - 35);
           }
         }
       } else {
@@ -603,6 +614,10 @@ export class FormView {
       });
       destroyText(this.textNameId);
       this.textNameId = undefined;
+    }
+    if (this.voiceIndicatorId) {
+      destroyText(this.voiceIndicatorId);
+      this.voiceIndicatorId = undefined;
     }
   }
 
@@ -690,6 +705,7 @@ export class FormView {
   private state = {};
   private localImmortal = false;
   private textNameId: number | undefined = undefined;
+  private voiceIndicatorId: number | undefined = undefined;
 
 
   public static isDisplayingNicknames: boolean = true;

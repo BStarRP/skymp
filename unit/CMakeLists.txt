@@ -4,12 +4,18 @@ if(BUILD_UNIT_TESTS AND NOT EMSCRIPTEN)
   include(${CMAKE_SOURCE_DIR}/cmake/add_papyrus_library_ck.cmake)
   include(${CMAKE_SOURCE_DIR}/cmake/apply_default_settings.cmake)
 
+  # Find Opus library for voice chat
+  find_package(Opus CONFIG REQUIRED)
+
+  # Add library directory for Opus
+  link_directories(${CMAKE_BINARY_DIR}/vcpkg_installed/x64-windows-sp/lib)
+
   #
   # papyrus_test_files
   #
 
   add_papyrus_library_ck(
-    NAME papyrus_test_files 
+    NAME papyrus_test_files
     DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/papyrus_test_files
     OUTPUT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/papyrus_test_files/pex
     COMPILER_EXECUTABLE_PATH "${SKYRIM_DIR}/Papyrus compiler/PapyrusCompiler.exe"
@@ -32,6 +38,7 @@ if(BUILD_UNIT_TESTS AND NOT EMSCRIPTEN)
   target_link_libraries(unit PRIVATE Catch2::Catch2)
 
   target_link_libraries(unit PUBLIC server_guest_lib espm)
+  target_link_libraries(unit PRIVATE ${CMAKE_BINARY_DIR}/vcpkg_installed/x64-windows-sp/lib/opus.lib) # Voice chat support
   if(TARGET platform_lib)
     target_link_libraries(unit PUBLIC platform_lib)
   endif()

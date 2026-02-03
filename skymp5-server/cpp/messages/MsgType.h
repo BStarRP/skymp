@@ -39,6 +39,8 @@ enum class MsgType : uint8_t
   Teleport2 = 31,
   UpdateGamemodeData = 32,
   CreateActor = 33,
+  VoiceChatMessage = 34,
+  UpdateVoiceChatMessage = 35,
 
   Max
 };

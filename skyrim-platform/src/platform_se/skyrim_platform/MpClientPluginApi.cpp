@@ -153,3 +153,46 @@ Napi::Value MpClientPluginApi::SendRaw(const Napi::CallbackInfo& info)
   f(data, dataLength, reliable);
   return info.Env().Undefined();
 }
+
+Napi::Value MpClientPluginApi::InitVoiceChat(const Napi::CallbackInfo& info)
+{
+  typedef void (*InitVoiceChat)();
+  auto f = (InitVoiceChat)GetMpClientPlugin()->GetFunction("InitVoiceChat");
+  f();
+  return info.Env().Undefined();
+}
+
+Napi::Value MpClientPluginApi::StartTalking(const Napi::CallbackInfo& info)
+{
+  typedef void (*StartTalking)();
+  auto f = (StartTalking)GetMpClientPlugin()->GetFunction("StartTalking");
+  f();
+  return info.Env().Undefined();
+}
+
+Napi::Value MpClientPluginApi::StopTalking(const Napi::CallbackInfo& info)
+{
+  typedef void (*StopTalking)();
+  auto f = (StopTalking)GetMpClientPlugin()->GetFunction("StopTalking");
+  f();
+  return info.Env().Undefined();
+}
+
+Napi::Value MpClientPluginApi::OnReceiveVoiceData(const Napi::CallbackInfo& info)
+{
+  typedef void (*OnReceiveVoiceData)(uint32_t speakerId, const uint8_t* audioData, size_t dataSize, float x, float y, float z);
+
+  auto speakerId = NapiHelper::ExtractInt32(info[0], "speakerId");
+  auto audioData = NapiHelper::ExtractArrayBuffer(info[1], "audioData");
+  auto x = NapiHelper::ExtractFloat(info[2], "x");
+  auto y = NapiHelper::ExtractFloat(info[3], "y");
+  auto z = NapiHelper::ExtractFloat(info[4], "z");
+
+  auto f = (OnReceiveVoiceData)GetMpClientPlugin()->GetFunction("OnReceiveVoiceData");
+  f(static_cast<uint32_t>(speakerId),
+    reinterpret_cast<const uint8_t*>(audioData.Data()),
+    audioData.ByteLength(),
+    x, y, z);
+
+  return info.Env().Undefined();
+}

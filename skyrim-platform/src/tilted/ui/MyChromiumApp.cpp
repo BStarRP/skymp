@@ -316,5 +316,11 @@ void MyChromiumApp::RunTasks()
 void MyChromiumApp::OnBeforeCommandLineProcessing(
   const CefString& aProcessType, CefRefPtr<CefCommandLine> aCommandLine)
 {
+  aCommandLine->AppendSwitch("enable-media-stream");
+  aCommandLine->AppendSwitch("use-fake-ui-for-media-stream");
+  aCommandLine->AppendSwitch("autoplay-policy");
+  aCommandLine->AppendSwitchWithValue("autoplay-policy", "no-user-gesture-required");
+  aCommandLine->AppendSwitch("disable-web-security");
+  aCommandLine->AppendSwitch("allow-running-insecure-content");
 }
 }

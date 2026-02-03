@@ -47,6 +47,7 @@ import { GamemodeEventSourceService } from "./services/services/gamemodeEventSou
 import { GamemodeUpdateService } from "./services/services/gamemodeUpdateService";
 import { FrontHotReloadService } from "./services/services/frontHotReloadService";
 import { BlockedAnimationsService } from "./services/services/blockedAnimationsService";
+import { VoiceChatService } from "./services/services/voiceChatService";
 import { WorldView } from "./view/worldView";
 import { KeyboardEventsService } from "./services/services/keyboardEventsService";
 import { MagicSyncService } from "./services/services/magicSyncService";
@@ -108,6 +109,7 @@ const main = () => {
       new GamemodeUpdateService(sp, controller),
       new FrontHotReloadService(sp, controller),
       new BlockedAnimationsService(sp, controller),
+      new VoiceChatService(sp, controller),
       new WorldView(sp, controller),
       new KeyboardEventsService(sp, controller),
       new MagicSyncService(sp, controller),
