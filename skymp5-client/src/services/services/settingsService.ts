@@ -166,6 +166,11 @@ export class SettingsService extends ClientListener {
     return [];
   };
 
+  public getServerPort(): number {
+    // Return the server port from settings
+    return this.sp.settings['skymp5-client']['server-port'] as number || 7777;
+  }
+
   private normalizeUrl(url: string) {
     if (url.endsWith('/')) {
       return url.slice(0, url.length - 1);

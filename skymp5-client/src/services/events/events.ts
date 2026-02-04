@@ -30,6 +30,7 @@ import { DeathStateContainerMessage } from "../messages/deathStateContainerMessa
 import { TeleportMessage2 } from "../messages/teleportMessage2";
 import { BrowserWindowLoadedEvent } from "./browserWindowLoadedEvent";
 import { AuthAttemptEvent } from "./authAttemptEvent";
+import { LoginSuccessEvent } from "./loginSuccessEvent";
 import { NewLocalLagValueCalculatedEvent } from "./newLocalLagValueCalculatedEvent";
 import { AuthNeededEvent } from "./authNeededEvent";
 import { QueryBlockSetInventoryEvent } from "./queryBlockSetInventoryEvent";
@@ -84,6 +85,7 @@ type EventTypes = {
 
     'browserWindowLoaded': [BrowserWindowLoadedEvent],
     'authAttempt': [AuthAttemptEvent],
+    'loginSuccess': [LoginSuccessEvent],
     'authNeeded': [AuthNeededEvent],
     'anyMessage': [ConnectionMessage<AnyMessage>],
     'anyRawMessage': [AnyRawMessageEvent],

@@ -27,6 +27,15 @@ const createApp = (getOriginPort: () => number) => {
       ctx.body = gScampServer.onHttpRpcRunAttempt(rpcClassName, payload);
     }
   });
+
+  // Basic health check endpoint
+  router.get("/health", async (ctx: any) => {
+    ctx.body = { 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      service: 'skymp-game-server'
+    };
+  });
   
   app.use(router.routes()).use(router.allowedMethods());
   app.use(serve("data"));
@@ -37,48 +46,104 @@ export const setServer = (scampServer: any) => {
   gScampServer = scampServer;
 };
 
-export const main = (settings: Settings): void => {
+const startStaticFileServer = (uiPort: number, uiListenHost: string = "127.0.0.1") => {
+  const appStatic = createApp(() => uiPort);
 
-  const devServerPort = 1234;
-
-  const uiListenHost = settings.allSettings.uiListenHost as (string | undefined);
-  const uiPort = settings.port === 7777 ? 3000 : settings.port + 1;
-
-  Axios({
-    method: "get",
-    url: `http://localhost:${devServerPort}`,
-  })
-    .then(() => {
-      console.log(`UI dev server has been detected on port ${devServerPort}`);
-
-      const state = { port: 0 };
-
-      const appStatic = createApp(() => state.port);
+  return new Promise((resolve, reject) => {
+    try {
       const srv = http.createServer(appStatic.callback());
-      srv.listen(0, () => {
-        const { port } = srv.address() as AddressInfo;
-        state.port = port;
-        const appProxy = new Koa();
-        appProxy.use(
-          proxy({
-            host: `http://localhost:${devServerPort}`,
-            map: (path: string) => {
-              const resultPath = path.match(/^\/ui\/.*/)
-                ? `http://localhost:${devServerPort}` + path.substr(3)
-                : `http://localhost:${port}` + path;
-              console.log(`proxy ${path} => ${resultPath}`);
-              return resultPath;
-            },
-          })
-        );
-        console.log(`Server resources folder is listening on ${uiPort}`);
-        http.createServer(appProxy.callback()).listen(uiPort, uiListenHost);
+
+      srv.listen(uiPort, uiListenHost, () => {
+        const addr = srv.address() as AddressInfo;
+        console.log(`Static file server listening on ${addr.address}:${addr.port}`);
+        resolve(srv);
       });
-    })
-    .catch(() => {
-      const app = createApp(() => uiPort);
-      console.log(`Server resources folder is listening on ${uiPort}`);
+
+      srv.on('error', (error) => {
+        console.error(`Static file server error:`, error);
+        reject(error);
+      });
+    } catch (error) {
+      console.error(`Failed to start static file server:`, error);
+      reject(error);
+    }
+  });
+};
+
+const startProxyServer = (uiPort: number, originPort: number, uiListenHost: string = "127.0.0.1") => {
+  const appProxy = new Koa();
+  appProxy.use(proxy({
+    host: `http://127.0.0.1:${originPort}`
+  }));
+
+  return new Promise((resolve, reject) => {
+    try {
+      const srv = http.createServer(appProxy.callback());
+      srv.listen(uiPort, uiListenHost, () => {
+        const addr = srv.address() as AddressInfo;
+        console.log(`Proxy server listening on ${addr.address}:${addr.port}, proxying to port ${originPort}`);
+        resolve(srv);
+      });
+
+      srv.on('error', (error) => {
+        console.error(`Proxy server error:`, error);
+        reject(error);
+      });
+    } catch (error) {
+      console.error(`Failed to start proxy server:`, error);
+      reject(error);
+    }
+  });
+};
+
+const startCombinedServer = (uiPort: number, originPort: number, uiListenHost: string = "127.0.0.1") => {
+  const app = createApp(() => originPort);
+  
+  return new Promise((resolve, reject) => {
+    try {
       const server = http.createServer(app.callback());
-      server.listen(uiPort, uiListenHost);
-    });
+      server.listen(uiPort, uiListenHost, () => {
+        const addr = server.address() as AddressInfo;
+        console.log(`Game server UI listening on ${addr.address}:${addr.port}`);
+        resolve(server);
+      });
+
+      server.on('error', (error) => {
+        console.error(`Game server UI error:`, error);
+        reject(error);
+      });
+    } catch (error) {
+      console.error(`Failed to start game server UI:`, error);
+      reject(error);
+    }
+  });
+};
+
+export const run = async (
+  uiPort: number,
+  originPort: number,
+  uiListenHost: string = "127.0.0.1",
+  dataDir: string = process.cwd(),
+  settings: Settings,
+) => {
+  process.chdir(dataDir);
+
+  let server: any = null;
+
+  if (originPort > 0) {
+    // Check if origin server is available
+    try {
+      await Axios.get(`http://127.0.0.1:${originPort}/health`, { timeout: 5000 });
+      console.log(`Origin server detected on port ${originPort}, starting proxy mode`);
+      server = await startProxyServer(uiPort, originPort, uiListenHost);
+    } catch (error) {
+      console.log(`No origin server on port ${originPort}, starting combined mode`);
+      server = await startCombinedServer(uiPort, originPort, uiListenHost);
+    }
+  } else {
+    console.log(`Starting static file server mode`);
+    server = await startStaticFileServer(uiPort, uiListenHost);
+  }
+
+  return server;
 };

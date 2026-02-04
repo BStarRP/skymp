@@ -1,0 +1,10 @@
+{
+  "gameData": {
+    "profileId": 1,
+    "accessToken": "test_token_123"
+  },
+  "master": "",
+  "server-ip": "127.0.0.1",
+  "server-master-key": null,
+  "server-port": 7777
+}

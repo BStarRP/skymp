@@ -39,6 +39,7 @@ import { SweetTaffySkillMenuService } from "./services/services/sweetTaffySkillM
 import { LoadOrderVerificationService } from "./services/services/loadOrderVerificationService";
 import { BrowserService } from "./services/services/browserService";
 import { AuthService } from "./services/services/authService";
+import { CharacterSelectService } from "./services/services/characterSelectService";
 import { NetInfoService } from "./services/services/netInfoService";
 import { AnimDebugService } from "./services/services/animDebugService";
 import { TimersService } from "./services/services/timersService";
@@ -101,6 +102,7 @@ const main = () => {
       new LoadOrderVerificationService(sp, controller),
       new BrowserService(sp, controller),
       new AuthService(sp, controller),
+      new CharacterSelectService(sp, controller),
       new NetInfoService(sp, controller),
       new AnimDebugService(sp, controller),
       new TimersService(sp, controller),

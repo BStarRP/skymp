@@ -6,6 +6,7 @@ const loginFailedNotInTheDiscordServer = JSON.stringify({ customPacketType: "log
 const loginFailedBanned = JSON.stringify({ customPacketType: "loginFailedBanned" });
 const loginFailedIpMismatch = JSON.stringify({ customPacketType: "loginFailedIpMismatch" });
 const loginFailedSessionNotFound = JSON.stringify({ customPacketType: "loginFailedSessionNotFound" });
+const loginFailedNotLoggedViaDiscord = JSON.stringify({ customPacketType: "loginFailedNotLoggedViaDiscord" });
 
 type Mp = any; // TODO
 
@@ -172,9 +173,9 @@ export class Login implements System {
           // }
 
           // TODO: remove this legacy discord-based ban system
-          if (roles.indexOf(discordAuth.banRoleId) !== -1) {
+          if (roles.indexOf(discordAuth.whitelistRoleId) === -1) {
             ctx.svr.sendCustomPacket(userId, loginFailedBanned);
-            throw new Error("Banned");
+            throw new Error("Not whitelisted - missing required Discord role");
           }
         }
 
@@ -214,7 +215,7 @@ export class Login implements System {
           });
         }
 
-        this.emit(ctx, "spawnAllowed", userId, profile.id, roles, profile.discordId);
+        this.emit(ctx, "loginSuccess", userId, profile.id, roles, profile.discordId);
         this.log("Logged as " + profile.id);
       })()
         .catch((err) => {
@@ -222,7 +223,7 @@ export class Login implements System {
         });
     } else if (this.offlineMode === true && gameData && typeof gameData.profileId === "number") {
       const profileId = gameData.profileId;
-      this.emit(ctx, "spawnAllowed", userId, profileId, [], undefined);
+      this.emit(ctx, "loginSuccess", userId, profileId, [], undefined);
       this.log(userId + " logged as " + profileId);
     } else {
       this.log("No credentials found in gameData:", gameData);

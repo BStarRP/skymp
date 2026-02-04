@@ -21,7 +21,7 @@ export class MasterApiBalanceSystem implements System {
             console.log(`MasterApiBalanceSystem.userAssignSession - Assigning session for userId ${userId}`);
             this.sessionByUserId[userId] = session;
         };
-        ctx.gm.on("userAssignSession", listenerFn);
+        (ctx.gm as any).on("userAssignSession", listenerFn);
 
         this.log(
             `MasterApiBalanceSystem system assumed that ${this.masterKey} is our address on master`,

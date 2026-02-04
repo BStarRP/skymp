@@ -16,8 +16,8 @@ import { MsgType } from "../../messages";
 import { ConnectionDenied } from "../events/connectionDenied";
 import { SettingsService } from "./settingsService";
 
-// for browsersideWidgetSetter
-declare const window: any;
+// Define as module-level variables instead of global declarations
+const window: any = (global as any).window || (globalThis as any).window || {};
 
 // Constants used on both client and browser side (see browsersideWidgetSetter)
 const events = {
@@ -28,7 +28,8 @@ const events = {
   clearAuthData: 'clearAuthData',
   updateRequired: 'updateRequired',
   backToLogin: 'backToLogin',
-  joinDiscord: 'joinDiscord'
+  joinDiscord: 'joinDiscord',
+  hideBrowser: 'hideBrowser',
 };
 
 // Vaiables used on both client and browser side (see browsersideWidgetSetter)
@@ -57,20 +58,57 @@ export class AuthService extends ClientListener {
   private onAuthNeeded(e: AuthNeededEvent) {
     logTrace(this, `Received authNeeded event`);
 
+    // Check if we have existing auth data on disk first
+    const existingAuthData = this.readAuthDataFromDisk();
+    if (existingAuthData) {
+      logTrace(this, `Found existing auth data, using it`);
+      this.controller.emitter.emit("authAttempt", {
+        authGameData: {
+          remote: existingAuthData
+        }
+      });
+      return;
+    }
+
     const settingsGameData = this.sp.settings["skymp5-client"]["gameData"] as any;
     const isOfflineMode = Number.isInteger(settingsGameData?.profileId);
+    this.setListenBrowserMessage(true, 'authNeeded received');
+
     if (isOfflineMode) {
       logTrace(this, `Offline mode detected in settings, emitting auth event with authGameData.local`);
-      this.controller.emitter.emit("authAttempt", { authGameData: { local: { profileId: settingsGameData.profileId } } });
+      this.controller.emitter.emit("authAttempt", {
+        authGameData: {
+          local: {
+            profileId: settingsGameData.profileId,
+            accessToken: settingsGameData.accessToken
+          }
+        }
+      });
     } else {
-      logTrace(this, `No offline mode detectted in settings, regular auth needed`);
-      this.setListenBrowserMessage(true, 'authNeeded event received');
+      logTrace(this, `No offline mode detected in settings, regular auth needed`);
+      this.setListenBrowserMessage(true, 'regular auth needed');
 
-      this.trigger.authNeededFired = true;
-      if (this.trigger.conditionMet) {
-        this.onBrowserWindowLoadedAndOnlineAuthNeeded();
-      }
+      this.onBrowserWindowLoadedShowStartWindow({
+        authGameData: {
+          local: {
+            profileId: settingsGameData.profileId,
+            accessToken: settingsGameData.accessToken
+          }
+        }
+      });
+
+      //this.trigger.authNeededFired = true;
+      //this.onBrowserWindowLoadedAndOnlineAuthNeeded();
     }
+  }
+
+  private onBrowserWindowLoadedShowStartWindow(data: any) {
+    this.sp.browser.setVisible(true);
+    this.sp.browser.setFocused(true);
+
+    authData = data;
+
+    this.sp.browser?.executeJavaScript(`window?.useMenuStore?.getState().onStart(${JSON.stringify(data)})`);
   }
 
   private onBrowserWindowLoaded(e: BrowserWindowLoadedEvent) {
@@ -122,7 +160,7 @@ export class AuthService extends ClientListener {
         this.authAttemptProgressIndicator = false;
         this.controller.lookupListener(NetworkingService).close();
         logTrace(this, 'loginFailedNotLoggedViaDiscord received');
-        browserState.loginFailedReason = 'войдите через discord';
+        browserState.loginFailedReason = 'please login via discord';
         browserState.comment = '';
         this.setListenBrowserMessage(true, 'loginFailedNotLoggedViaDiscord received');
         this.loggingStartMoment = 0;
@@ -132,7 +170,7 @@ export class AuthService extends ClientListener {
         this.authAttemptProgressIndicator = false;
         this.controller.lookupListener(NetworkingService).close();
         logTrace(this, 'loginFailedNotInTheDiscordServer received');
-        browserState.loginFailedReason = 'вступите в discord сервер';
+        browserState.loginFailedReason = 'please join the discord server';
         browserState.comment = '';
         this.setListenBrowserMessage(true, 'loginFailedNotInTheDiscordServer received');
         this.loggingStartMoment = 0;
@@ -174,16 +212,8 @@ export class AuthService extends ClientListener {
     this.sp.browser.setVisible(true);
     this.sp.browser.setFocused(true);
 
-    const timersService = this.controller.lookupListener(TimersService);
-
-    logTrace(this, "Calling setTimeout for testing");
-    try {
-      timersService.setTimeout(() => {
-        logTrace(this, "Test timeout fired");
-      }, 1);
-    } catch (e) {
-      logError(this, "Failed to call setTimeout");
-    }
+    // Start checking for login state from Discord OAuth
+    this.checkLoginState();
   }
 
   private onBrowserMessage(e: BrowserMessageEvent) {
@@ -199,29 +229,33 @@ export class AuthService extends ClientListener {
     const eventKey = e.arguments[0];
     switch (eventKey) {
       case events.openDiscordOauth:
-        browserState.comment = 'открываем браузер...';
+        browserState.comment = 'opening browser...';
         this.refreshWidgets();
-        this.sp.win32.loadUrl(`${settingsService.getMasterUrl()}/api/users/login-discord?state=${this.discordAuthState}`);
+        this.sp.win32.loadUrl(`http://localhost:${this.getServerPort()}/api/users/login-discord?state=${this.discordAuthState}`);
 
         // Launch checkLoginState loop
         this.checkLoginState();
         break;
       case events.authAttempt:
         if (authData === null) {
-          browserState.comment = 'сначала войдите';
+          browserState.comment = 'please login first';
           this.refreshWidgets();
           break;
         }
 
-        this.writeAuthDataToDisk(authData);
-        this.controller.emitter.emit("authAttempt", { authGameData: { remote: authData } });
+        // Hide the browser and emit loginSuccess for character selection
+        this.sp.browser.executeJavaScript('window.skyrimPlatform.widgets.set([]);');
+        this.authDialogOpen = false;
+        this.sp.browser.setVisible(false);
 
-        this.authAttemptProgressIndicator = true;
+        // Note: Auth data is managed by launcher, client only reads it
+
+        // Emit loginSuccess event to trigger character selection
+        this.controller.emitter.emit("loginSuccess", { authGameData: { remote: authData } });
 
         break;
       case events.clearAuthData:
-        // Doesn't seem to be used
-        this.writeAuthDataToDisk(null);
+        // Doesn't seem to be used - launcher manages auth data
         break;
       case events.openGithub:
         this.sp.win32.loadUrl(this.githubUrl);
@@ -245,17 +279,16 @@ export class AuthService extends ClientListener {
   }
 
   private createPlaySession(token: string, callback: (res: string, err: string) => void) {
-    const settingsService = this.controller.lookupListener(SettingsService);
-    const client = new this.sp.HttpClient(settingsService.getMasterUrl());
+    const client = new this.sp.HttpClient(`http://localhost:${this.getServerPort()}`);
 
-    const route = `/api/users/me/play/${settingsService.getServerMasterKey()}`;
+    const route = `/api/users/me/play/main`;
     logTrace(this, `Creating play session ${route}`);
 
     client.post(route, {
       body: '{}',
       contentType: 'application/json',
       headers: {
-        'authorization': token,
+        'authorization': `Bearer ${token}`,
       },
       // @ts-ignore
     }, (res) => {
@@ -274,7 +307,6 @@ export class AuthService extends ClientListener {
       return;
     }
 
-    const settingsService = this.controller.lookupListener(SettingsService);
     const timersService = this.controller.lookupListener(TimersService);
 
     // Social engineering protection, don't show the full state
@@ -282,7 +314,7 @@ export class AuthService extends ClientListener {
 
     logTrace(this, `Checking login state`, halfDiscordAuthState, '...');
 
-    new this.sp.HttpClient(settingsService.getMasterUrl())
+    new this.sp.HttpClient(`http://localhost:${this.getServerPort()}`)
       .get("/api/users/login-discord/status?state=" + this.discordAuthState, undefined,
         // @ts-ignore
         (response) => {
@@ -311,7 +343,7 @@ export class AuthService extends ClientListener {
                   discordDiscriminator,
                   discordAvatar,
                 };
-                browserState.comment = 'привязан успешно';
+                browserState.comment = 'connected successfully';
                 this.refreshWidgets();
               });
               break;
@@ -358,20 +390,8 @@ export class AuthService extends ClientListener {
   }
 
   private writeAuthDataToDisk(data: RemoteAuthGameData | null) {
-    const content = "//" + (data ? JSON.stringify(data) : "null");
-
-    logTrace(this, `Writing`, this.pluginAuthDataName, `to disk:`, content);
-
-    try {
-      this.sp.writePlugin(
-        this.pluginAuthDataName,
-        content,
-        // @ts-expect-error (TODO: Remove in 2.10.0)
-        "PluginsNoLoad"
-      );
-    } catch (e) {
-      logError(this, `Error writing`, this.pluginAuthDataName, `to disk:`, e, `, will not remember user`);
-    }
+    // Auth data writing is handled by the launcher, client only reads
+    logTrace(this, `Auth data writing disabled - launcher manages auth data`);
   };
 
   private deniedWidgetSetter = () => {
@@ -422,16 +442,16 @@ export class AuthService extends ClientListener {
     const widget = {
       type: "form",
       id: 2,
-      caption: "упс",
+      caption: "Error",
       elements: new Array<any>()
     }
 
     textElements.forEach((element) => widget.elements.push(element));
 
-    if (browserState.loginFailedReason === 'вступите в discord сервер') {
+    if (browserState.loginFailedReason === 'please join the discord server') {
       widget.elements.push({
         type: "button",
-        text: "вступить",
+        text: "Join Server",
         tags: ["ELEMENT_STYLE_MARGIN_EXTENDED"],
         click: () => window.skyrimPlatform.sendMessage(events.joinDiscord),
         hint: null
@@ -440,7 +460,7 @@ export class AuthService extends ClientListener {
 
     widget.elements.push({
       type: "button",
-      text: "назад",
+      text: "Back",
       tags: ["ELEMENT_STYLE_MARGIN_EXTENDED"],
       click: () => window.skyrimPlatform.sendMessage(events.backToLogin),
       hint: undefined
@@ -453,30 +473,8 @@ export class AuthService extends ClientListener {
     const loginWidget = {
       type: "form",
       id: 1,
-      caption: "Авторизация",
+      caption: "Authentication",
       elements: [
-        // {
-        //   type: "button",
-        //   tags: ["BUTTON_STYLE_GITHUB"],
-        //   hint: "get a colored nickname and mention in news",
-        //   click: () => window.skyrimPlatform.sendMessage(events.openGithub),
-        // },
-        // {
-        //   type: "button",
-        //   tags: ["BUTTON_STYLE_PATREON", "ELEMENT_SAME_LINE", "HINT_STYLE_RIGHT"],
-        //   hint: "get a colored nickname and other bonuses for patrons",
-        //   click: () => window.skyrimPlatform.sendMessage(events.openPatreon),
-        // },
-        // {
-        //   type: "icon",
-        //   text: "username",
-        //   tags: ["ICON_STYLE_SKYMP"],
-        // },
-        // {
-        //   type: "icon",
-        //   text: "",
-        //   tags: ["ICON_STYLE_DISCORD"],
-        // },
         {
           type: "text",
           text: (
@@ -484,28 +482,23 @@ export class AuthService extends ClientListener {
               authData.discordUsername
                 ? `${authData.discordUsername}`
                 : `id: ${authData.masterApiId}`
-            ) : "не авторизирован"
+            ) : "not authorized"
           ),
-          tags: [/*"ELEMENT_SAME_LINE", "ELEMENT_STYLE_MARGIN_EXTENDED"*/],
+          tags: [],
         },
-        // {
-        //   type: "icon",
-        //   text: "discord",
-        //   tags: ["ICON_STYLE_DISCORD"],
-        // },
         {
           type: "button",
-          text: authData ? "сменить аккаунт" : "войти через skymp",
-          tags: [/*"ELEMENT_SAME_LINE"*/],
+          text: authData ? "Change Account" : "Login via Discord",
+          tags: [],
           click: () => window.skyrimPlatform.sendMessage(events.openDiscordOauth),
-          hint: "Вы можете войти или поменять аккаунт",
+          hint: "You can login or change account",
         },
         {
           type: "button",
-          text: "Играть",
+          text: "Connect",
           tags: ["BUTTON_STYLE_FRAME", "ELEMENT_STYLE_MARGIN_EXTENDED"],
           click: () => window.skyrimPlatform.sendMessage(events.authAttempt),
-          hint: "Подключиться к игровому серверу",
+          hint: "Connect to game server",
         },
         {
           type: "text",
@@ -567,6 +560,10 @@ export class AuthService extends ClientListener {
           customPacketType: 'loginWithSkympIo',
           gameData: {
             session: authData.remote.session,
+            masterApiId: authData.remote.masterApiId,
+            discordUsername: authData.remote.discordUsername,
+            discordDiscriminator: authData.remote.discordDiscriminator,
+            discordAvatar: authData.remote.discordAvatar,
           },
         }),
       };
@@ -602,7 +599,7 @@ export class AuthService extends ClientListener {
         this.sp.browser.executeJavaScript(new FunctionInfo(this.loginFailedWidgetSetter).getText({ events, browserState, authData: authData }));
 
         authData = null;
-        this.writeAuthDataToDisk(null);
+        // Note: Auth data cleanup handled by launcher
       }
     }
 
@@ -658,4 +655,12 @@ export class AuthService extends ClientListener {
   private readonly githubUrl = "https://github.com/skyrim-multiplayer/skymp";
   private readonly patreonUrl = "https://www.patreon.com/skymp";
   private readonly pluginAuthDataName = `auth-data-no-load`;
+
+  private getServerPort(): number {
+    // Use the same port that the UI server uses (typically 3000 for dev, port+1 for custom ports)
+    // This matches the pattern in ui.ts
+    const settingsService = this.controller.lookupListener(SettingsService);
+    const serverPort = settingsService.getServerPort();
+    return serverPort === 7777 ? 3000 : serverPort + 1;
+  }
 }

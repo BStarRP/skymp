@@ -20,7 +20,10 @@ import { System } from "./systems/system";
 import { MasterClient } from "./systems/masterClient";
 import { Spawn } from "./systems/spawn";
 import { Login } from "./systems/login";
-import { DiscordBanSystem } from "./systems/discordBanSystem";
+import { LoginDiscord } from "./systems/loginDiscord";
+import { CharacterManager } from "./systems/characterManager";
+import { DiscordWhitelistSystem } from "./systems/discordWhitelistSystem";
+
 import { MasterApiBalanceSystem } from "./systems/masterApiBalanceSystem";
 import { EventEmitter } from "events";
 import { pid } from "process";
@@ -192,15 +195,16 @@ const main = async () => {
   systems.push(
     new MasterClient(log, port, master, maxPlayers, name, masterKey, 5000, offlineMode),
     new Spawn(log),
-    new Login(log, maxPlayers, master, port, masterKey, offlineMode),
-    new DiscordBanSystem(),
+    new LoginDiscord(log),
+    new CharacterManager(log),
+    new DiscordWhitelistSystem(),
     new MasterApiBalanceSystem(log, maxPlayers, master, port, masterKey, offlineMode),
   );
 
   setupStreams(scampNative.getScampNative());
 
   manifestGen.generateManifest(settingsObject);
-  ui.main(settingsObject);
+
 
   let server: any;
 
@@ -212,7 +216,7 @@ const main = async () => {
     console.error(`Stopping the server due to the previous error`);
     process.exit(-1);
   }
-  const ctx = { svr: server, gm: new EventEmitter() };
+  const ctx = { svr: server, gm: new EventEmitter(), settings: settingsObject };
 
   console.log(`Current process ID is ${pid}`);
 

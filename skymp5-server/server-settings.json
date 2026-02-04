@@ -1,0 +1,21 @@
+{
+  "dataDir": "data",
+  "name": "My Server",
+  "port": 7777,
+  "maxPlayers": 100,
+  "offlineMode": false,
+  "master": "https://gateway.skymp.net",
+  "loadOrder": [
+    "Skyrim.esm",
+    "Update.esm",
+    "Dawnguard.esm",
+    "HearthFires.esm",
+    "Dragonborn.esm"
+  ],
+  "discordAuth": {
+    "clientId": "your_discord_client_id",
+    "clientSecret": "your_discord_client_secret",
+    "guildId": "your_discord_server_id",
+    "redirectUri": "http://localhost:3000/auth/discord/callback"
+  }
+}

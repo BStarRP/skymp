@@ -8,7 +8,7 @@ import lodash from 'lodash';
 export interface DiscordAuthSettings {
   botToken: string;
   guildId: string;
-  banRoleId: string;
+  whitelistRoleId: string;
   eventLogChannelId?: string;
   hideIpRoleId?: string;
 }
