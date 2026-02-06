@@ -6,6 +6,7 @@ import AnimList from './features/animList';
 import Constructor from './constructor';
 import SkillsMenu from './features/skillsMenu';
 import TestMenu from './features/testMenu';
+import CharacterSelect from './features/characterSelect';
 
 class App extends React.Component {
   constructor(props) {
@@ -84,11 +85,13 @@ class App extends React.Component {
           <Chat />
           <SkillsMenu />
           <TestMenu />
+          <CharacterSelect />
         </div>
       );
     } else if (this.state.widgets) {
       return (
         <div style={{ position: 'static' }}>
+          <CharacterSelect />
           {this.state.widgets.map((widget, index) =>
             <Constructor
               key={index.toString() + widget.type + ((widget.type === 'form') ? widget.elements + widget.caption : 'chat')}

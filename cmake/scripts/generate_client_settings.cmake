@@ -7,6 +7,7 @@ else()
     set(CLIENT_SETTINGS_JSON "{}")
     string(JSON CLIENT_SETTINGS_JSON SET "${CLIENT_SETTINGS_JSON}" "server-ip" "\"127.0.0.1\"")
     string(JSON CLIENT_SETTINGS_JSON SET "${CLIENT_SETTINGS_JSON}" "server-port" "7777")
+    string(JSON CLIENT_SETTINGS_JSON SET "${CLIENT_SETTINGS_JSON}" "discord-auth-url" "\"http://localhost:3000\"")
 endif()
 
 if(OFFLINE_MODE)

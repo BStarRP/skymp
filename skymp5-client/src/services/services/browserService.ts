@@ -2,6 +2,7 @@
 // TODO: send event instead of direct dependency on FormView class
 import { FormView } from "../../view/formView";
 import { QueryKeyCodeBindings } from "../events/queryKeyCodeBindings";
+import { logTrace } from "../../logging";
 
 import { ClientListener, CombinedController, Sp } from "./clientListener";
 import { BrowserMessageEvent, DxScanCode, Menu, MenuCloseEvent, MenuOpenEvent } from "skyrimPlatform";
@@ -58,7 +59,10 @@ export class BrowserService extends ClientListener {
   private onBrowserMessage(e: BrowserMessageEvent) {
     const onFrontLoadedEventKey = "front-loaded";
 
+    logTrace(this, `Received browser message:`, JSON.stringify(e.arguments));
+
     if (e.arguments[0] === onFrontLoadedEventKey) {
+      logTrace(this, `Received front-loaded message, emitting browserWindowLoaded event`);
       this.controller.emitter.emit("browserWindowLoaded", {});
     }
   }
@@ -104,7 +108,7 @@ export class BrowserService extends ClientListener {
     Menu.RaceSex,
     Menu.Stats,
     Menu.Tween,
-    Menu.Console,
-    Menu.Main,
+    //Menu.Console,
+    //Menu.Main,
   ];
 }

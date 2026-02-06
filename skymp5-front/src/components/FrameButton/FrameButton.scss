@@ -1,17 +1,40 @@
 .skymp-button {
   width: 384px;
   height: 64px;
-  display: flex;
+  display: inline-flex;
   flex-direction: row;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   cursor: pointer;
-  text-overflow: ellipsis;
   font-family: 'Bankir-Retro', serif;
-  transition: transform 0.15s ease; /* Transition for the transform */
+  transition: transform 0.15s ease;
+  transform-origin: center center;
+  border: 0;
+  background: none;
+  padding: 0;
+  margin: 0;
+  outline: none;
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+  vertical-align: top;
+
+  > div {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    margin: 0;
+    padding: 0;
+    display: block;
+    float: left;
+  }
 }
 
 .skymp-button:hover {
-  transform: scale(1.05); /* Scale the button on hover */
+  transform: scale(1.05);
+
+  .button-middle * {
+    color: rgba(255, 255, 255, 1);
+  }
 }
 
 .skymp-button.disabled {
@@ -23,13 +46,32 @@
   text-transform: uppercase;
   font-size: 25px;
   text-align: center;
-  align-self: center;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  line-height: 64px;
   * {
     overflow: hidden;
     text-overflow: ellipsis;
     margin: auto;
     color: rgba(157, 158, 158, 0.75);
+    pointer-events: none;
   }
+}
+
+// Adjust line-height for smaller buttons
+.skymp-button[style*="height: 48px"] .button-middle,
+.skymp-button[style*="height:48px"] .button-middle {
+  line-height: 48px;
+}
+
+.skymp-button[style*="height: 56px"] .button-middle,
+.skymp-button[style*="height:56px"] .button-middle {
+  line-height: 56px;
+}
+
+.button-middle--text {
+  pointer-events: none;
 }
 
 .button-middle--left {

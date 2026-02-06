@@ -4,10 +4,7 @@ import { ConnectionMessage } from "../events/connectionMessage";
 import { CustomPacketMessage } from "../messages/customPacketMessage";
 import { MsgType } from "../../messages";
 import { logTrace, logError } from "../../logging";
-
-// Define as module-level variables instead of global declarations
-const window: any = (global as any).window || (globalThis as any).window || {};
-const confirm = (global as any).confirm || ((msg: string) => true); // Default confirm to true
+import { NetworkingService } from "./networkingService";
 
 interface CharacterInfo {
   visibleId: number;
@@ -22,27 +19,25 @@ interface CharacterListData {
   currentCount: number;
 }
 
-// Define event constants for browser messages
-const characterEvents = {
-  selectCharacter: 'selectCharacter',
-  createCharacter: 'createCharacter',
-  deleteCharacter: 'deleteCharacter',
-};
-
 // Events used on both client and browser side
 const events = {
   selectCharacter: 'characterSelect_select',
   createCharacter: 'characterSelect_create',
   deleteCharacter: 'characterSelect_delete',
+  backToLogin: 'characterSelect_back',
 };
 
 export class CharacterSelectService extends ClientListener {
+  private characterSelectActive = false;
+  public resetAuthState = false;
+
   constructor(private sp: Sp, private controller: CombinedController) {
     super();
 
     this.controller.emitter.on("customPacketMessage", (e) => this.onCustomPacketMessage(e));
     this.controller.on("browserMessage", (e) => this.onBrowserMessage(e));
-    
+    this.controller.emitter.on("createActorMessage", (e) => this.onCreateActorMessage(e));
+
     // Listen for loginSuccess event from AuthService
     this.controller.emitter.on("loginSuccess", (e) => this.onLoginSuccess(e));
   }
@@ -56,7 +51,7 @@ export class CharacterSelectService extends ClientListener {
   private onCustomPacketMessage(event: ConnectionMessage<CustomPacketMessage>): void {
     try {
       const content = JSON.parse(event.message.contentJsonDump);
-      
+
       switch (content.customPacketType) {
         case "characterList":
           this.handleCharacterList(content);
@@ -73,69 +68,17 @@ export class CharacterSelectService extends ClientListener {
   private handleCharacterList(data: CharacterListData): void {
     logTrace(this, `Received character list: ${data.characters.length} characters, ${data.maxSlots} max slots`);
 
-    // Create character selection widget
-    const characterElements = data.characters.map((char, index) => ({
-      type: "button",
-      text: `${char.name} (${char.isFemale ? 'Female' : 'Male'})`,
-      tags: ["ELEMENT_STYLE_MARGIN_EXTENDED"],
-      click: () => window.skyrimPlatform.sendMessage(characterEvents.selectCharacter, char.visibleId),
-      hint: `Select character: ${char.name}`,
-    }));
+    this.characterSelectActive = true;
 
-    // Add create character button if there's room
-    if (data.characters.length < data.maxSlots) {
-      characterElements.push({
-        type: "button",
-        text: "Create New Character",
-        tags: ["BUTTON_STYLE_FRAME", "ELEMENT_STYLE_MARGIN_EXTENDED"],
-        click: () => window.skyrimPlatform.sendMessage(characterEvents.createCharacter),
-        hint: `Create a new character (${data.characters.length}/${data.maxSlots} slots used)`,
-      });
-    }
+    // Inject data into window for custom UI access (following skyrim-roleplay pattern)
+    const injectScript = `
+      window.skymp = window.skymp || {};
+      window.skymp.characterSelect = ${JSON.stringify(data)};
+      window.dispatchEvent(new CustomEvent('skymp:characterList', { detail: ${JSON.stringify(data)} }));
+    `;
+    this.sp.browser.executeJavaScript(injectScript);
 
-    // Add delete character buttons
-    if (data.characters.length > 0) {
-      characterElements.push({
-        type: "text",
-        text: "Delete Character:",
-        tags: [],
-        click: () => {}, // Empty click handler for text elements
-        hint: "Delete character options below",
-      });
-
-      data.characters.forEach((char) => {
-        characterElements.push({
-          type: "button",
-          text: `Delete ${char.name}`,
-          tags: ["ELEMENT_STYLE_MARGIN_EXTENDED"],
-          click: () => {
-            if (confirm(`Are you sure you want to delete character "${char.name}"?`)) {
-              window.skyrimPlatform.sendMessage(characterEvents.deleteCharacter, char.visibleId);
-            }
-          },
-          hint: `Delete character: ${char.name}`,
-        });
-      });
-    }
-
-    const characterWidget = {
-      type: "form",
-      id: 3,
-      caption: "Character Selection",
-      elements: [
-        {
-          type: "text",
-          text: `Select a character (${data.characters.length}/${data.maxSlots} slots used)`,
-          tags: [],
-          click: () => {}, // Empty click handler for text elements
-          hint: "Character selection instructions",
-        },
-        ...characterElements,
-      ]
-    };
-
-    // Show character selection UI
-    window.skyrimPlatform.widgets.set([characterWidget]);
+    // Show browser for character selection UI
     this.sp.browser.setVisible(true);
     this.sp.browser.setFocused(true);
   }
@@ -143,43 +86,31 @@ export class CharacterSelectService extends ClientListener {
   private handleCharacterError(message: string): void {
     logError(this, `Character error: ${message}`);
 
-    const errorWidget = {
-      type: "form",
-      id: 4,
-      caption: "Character Error",
-      elements: [
-        {
-          type: "text",
-          text: message,
-          tags: [],
-          click: () => {}, // Empty click handler for text elements
-          hint: "Error message",
-        },
-        {
-          type: "button",
-          text: "OK",
-          tags: ["BUTTON_STYLE_FRAME", "ELEMENT_STYLE_MARGIN_EXTENDED"],
-          click: () => {
-            // Hide error and go back to character selection
-            window.skyrimPlatform.widgets.set([]);
-            // Request character list again
-            const message: CustomPacketMessage = {
-              t: MsgType.CustomPacket,
-              contentJsonDump: JSON.stringify({
-                customPacketType: 'requestCharacterList',
-              }),
-            };
-            this.controller.emitter.emit("sendMessage", {
-              message,
-              reliability: "reliable"
-            });
-          },
-          hint: "Close error message",
-        },
-      ]
-    };
+    // Inject error into window for custom UI access
+    const injectScript = `
+      window.skymp = window.skymp || {};
+      window.skymp.characterSelectError = ${JSON.stringify(message)};
+      window.dispatchEvent(new CustomEvent('skymp:characterError', { detail: ${JSON.stringify({ message })} }));
+    `;
+    this.sp.browser.executeJavaScript(injectScript);
+  }
 
-    window.skyrimPlatform.widgets.set([errorWidget]);
+  private onCreateActorMessage(e: any): void {
+    // Hide character select screen when player spawns in world
+    if (this.characterSelectActive) {
+      logTrace(this, `Player spawned, hiding character select screen`);
+      
+      const clearScript = `
+        if (window.skymp) {
+          window.skymp.characterSelect = null;
+          window.skymp.characterSelectError = null;
+        }
+        window.dispatchEvent(new CustomEvent('skymp:characterList', { detail: null }));
+      `;
+      this.sp.browser.executeJavaScript(clearScript);
+      
+      this.characterSelectActive = false;
+    }
   }
 
   private onBrowserMessage(e: BrowserMessageEvent): void {
@@ -187,14 +118,17 @@ export class CharacterSelectService extends ClientListener {
     const eventData = e.arguments[1];
 
     switch (eventKey) {
-      case characterEvents.selectCharacter:
+      case events.selectCharacter:
         this.sendSelectCharacter(eventData as number);
         break;
-      case characterEvents.createCharacter:
+      case events.createCharacter:
         this.sendCreateCharacter();
         break;
-      case characterEvents.deleteCharacter:
+      case events.deleteCharacter:
         this.sendDeleteCharacter(eventData as number);
+        break;
+      case events.backToLogin:
+        this.handleBackToLogin();
         break;
     }
   }
@@ -241,5 +175,31 @@ export class CharacterSelectService extends ClientListener {
       message,
       reliability: "reliable"
     });
+  }
+
+  private handleBackToLogin(): void {
+    logTrace(this, `Back to login - returning to fresh auth screen`);
+    
+    // Set flag to prevent auto-reconnect in authService
+    this.resetAuthState = true;
+    
+    // Clear character select data
+    const clearScript = `
+      if (window.skymp) {
+        window.skymp.characterSelect = null;
+        window.skymp.characterSelectError = null;
+      }
+      window.dispatchEvent(new CustomEvent('skymp:characterList', { detail: null }));
+    `;
+    this.sp.browser.executeJavaScript(clearScript);
+    
+    this.characterSelectActive = false;
+    
+    // Close connection and ensure browser stays visible for auth screen
+    this.controller.lookupListener(NetworkingService).close();
+    
+    // Keep browser visible for auth UI
+    this.sp.browser.setVisible(true);
+    this.sp.browser.setFocused(true);
   }
 }

@@ -132,7 +132,7 @@ const Constructor = props => {
               curElem = <Button disabled={obj.element.isDisabled} css={obj.css} text={obj.element.text} onClick={obj.element.click} width={obj.element.width} height={obj.element.height} />;
               break;
             case 'text':
-              curElem = <Text text={obj.element.text} />;
+              curElem = <Text text={obj.element.text} style={obj.element.style} />;
               break;
             case 'inputText':
               curElem = <SkyrimInput disabled={obj.element.isDisabled} initialValue={obj.element.initialValue} text={obj.element.text} placeholder={obj.element.placeholder} type={'text'} name={obj.index} width={obj.element.width} height={obj.element.height} onInput={obj.element.onInput} />;

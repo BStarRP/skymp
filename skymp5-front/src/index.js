@@ -28,6 +28,23 @@ ReactDOM.render(
   document.getElementById('root')
 );
 
+// Send front-loaded message to notify the client that the UI is ready
+if (window.skyrimPlatform && window.skyrimPlatform.sendMessage) {
+  console.log('Sending front-loaded message');
+  window.skyrimPlatform.sendMessage('front-loaded');
+} else {
+  console.log('skyrimPlatform.sendMessage not available yet, deferring front-loaded message');
+  // Try again after a short delay
+  setTimeout(() => {
+    if (window.skyrimPlatform && window.skyrimPlatform.sendMessage) {
+      console.log('Sending front-loaded message (delayed)');
+      window.skyrimPlatform.sendMessage('front-loaded');
+    } else {
+      console.error('skyrimPlatform.sendMessage still not available');
+    }
+  }, 100);
+}
+
 // Called from skymp5-functions-lib, chatProperty.ts
 window.scrollToLastMessage = () => {
   const _list = document.querySelector('#chat > .chat-main > .list > .chat-list');

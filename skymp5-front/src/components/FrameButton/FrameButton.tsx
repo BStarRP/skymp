@@ -67,6 +67,7 @@ const ButtonItem = ({
                 backgroundRepeat: 'repeat',
                 height:`${height}px`,
                 width: `${width}px`,
+                flexShrink: 0,
             }}
             className={name.toLowerCase().replace(/_/g, '-')}
         >
