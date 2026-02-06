@@ -55,6 +55,3 @@ window.playSound = (name) => {
   (new Audio(require('./sound/' + name).default)).play();
 };
 
-if (window.skyrimPlatform?.sendMessage) {
-  window.skyrimPlatform.sendMessage('front-loaded');
-}

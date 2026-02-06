@@ -50,17 +50,26 @@ export class NetworkingService extends ClientListener {
   }
 
   connect(hostName: string, port: number) {
+    this.suppressReconnect = false;
     this.serverAddress = { hostName, port };
     this.createClientSafe();
   }
 
   reconnect() {
+    if (this.suppressReconnect) return;
     this.createClientSafe();
+  }
+
+  /** When true, disconnect events will not trigger auto-reconnect (e.g. user went back to login). */
+  setSuppressReconnect(value: boolean) {
+    this.suppressReconnect = value;
   }
 
   close() {
     this.sp.mpClientPlugin.destroyClient();
   }
+
+  private suppressReconnect = false;
 
   isConnected() {
     return this.sp.mpClientPlugin.isConnected();

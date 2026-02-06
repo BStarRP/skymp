@@ -145,3 +145,60 @@
   padding-bottom: 10px;
   border-top: 1px solid rgba(70, 70, 70, 0.5);
 }
+
+// Match login screen button styling
+.skyrim-button {
+  font-family: 'Bankir-Retro', serif;
+  font-size: 20px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: rgba(157, 158, 158, 0.75);
+  background: linear-gradient(180deg, rgba(40, 40, 40, 0.9) 0%, rgba(20, 20, 20, 0.9) 100%);
+  border: 2px solid rgba(100, 100, 100, 0.8);
+  border-radius: 0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1),
+              inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+              0 2px 4px rgba(0, 0, 0, 0.5);
+
+  &:hover:not(:disabled) {
+    color: rgba(255, 255, 255, 0.95);
+    background: linear-gradient(180deg, rgba(60, 60, 60, 0.9) 0%, rgba(35, 35, 35, 0.9) 100%);
+    border-color: rgba(150, 150, 150, 0.9);
+    transform: scale(1.02);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.character-select-btn {
+  width: 320px;
+  height: 56px;
+
+  &--create {
+    width: 384px;
+    height: 56px;
+  }
+
+  &--back {
+    width: 242px;
+    height: 48px;
+    font-size: 18px;
+  }
+}
+
+.character-actions .character-select-btn {
+  width: 180px;
+  height: 48px;
+  font-size: 16px;
+}

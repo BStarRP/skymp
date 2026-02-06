@@ -18,6 +18,9 @@
   -webkit-backface-visibility: hidden;
   overflow: hidden;
   vertical-align: top;
+  position: relative;
+  z-index: 100;
+  pointer-events: auto;
 
   > div {
     backface-visibility: hidden;

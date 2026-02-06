@@ -7,6 +7,7 @@ import Constructor from './constructor';
 import SkillsMenu from './features/skillsMenu';
 import TestMenu from './features/testMenu';
 import CharacterSelect from './features/characterSelect';
+import Auth from './features/auth';
 
 class App extends React.Component {
   constructor(props) {
@@ -88,21 +89,14 @@ class App extends React.Component {
           <CharacterSelect />
         </div>
       );
-    } else if (this.state.widgets) {
+    } else {
       return (
         <div style={{ position: 'static' }}>
+          <Auth />
           <CharacterSelect />
-          {this.state.widgets.map((widget, index) =>
-            <Constructor
-              key={index.toString() + widget.type + ((widget.type === 'form') ? widget.elements + widget.caption : 'chat')}
-              dynamicSize={true}
-              elem={widget}
-              height={this.props.height || 704}
-              width={this.props.width || 512} />
-          )}
         </div>
       );
-    } else { return <></>; }
+    }
   }
 }
 

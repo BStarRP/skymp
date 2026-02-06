@@ -3,26 +3,6 @@ import * as fs from "fs";
 import * as path from "path";
 import axios from 'axios';
 
-interface UserProfile {
-  id: string;
-  discordId: string;
-  username: string;
-  discriminator: string;
-  avatar?: string;
-}
-
-interface AuthData {
-  userId: string;
-  username: string;
-  discriminator: string;
-  avatar?: string;
-  email?: string;
-  accessToken: string;
-  refreshToken?: string;
-  expiresAt: string;
-  authenticatedAt: string;
-}
-
 const loginFailedSessionNotFound = JSON.stringify({
   customPacketType: "loginFailedSessionNotFound",
 });
@@ -43,11 +23,18 @@ const loginFailedTokenExpired = JSON.stringify({
   customPacketType: "loginFailedTokenExpired",
 });
 
+/** Persisted mapping: Discord user ID (string) -> small integer profileId for character storage. */
+interface ProfilesData {
+  lastIndex: number;
+  users: Record<string, number>;
+}
+
 export class LoginDiscord implements System {
   systemName = "LoginDiscord";
   private discordGuildId: string | undefined;
   private discordBotToken: string | undefined;
   private whitelistRoleId: string | undefined;
+  private profilesFilePath: string = "";
 
   constructor(private log: Log) {}
 
@@ -58,6 +45,7 @@ export class LoginDiscord implements System {
     this.discordGuildId = discordSettings.guildId || discordSettings.serverId;
     this.discordBotToken = discordSettings.token || discordSettings.botToken;
     this.whitelistRoleId = discordSettings.whitelistRoleId;
+    this.profilesFilePath = path.join(process.cwd(), "profiles.json");
 
     this.log("LoginDiscord system initialized");
     if (this.discordGuildId) {
@@ -87,113 +75,88 @@ export class LoginDiscord implements System {
 
     const gameData = content["gameData"];
 
-    if (!gameData || !gameData.session) {
-      this.log(`No session found in gameData for user ${userId}`);
+    if (!gameData) {
+      this.log(`No gameData for user ${userId}`);
       ctx.svr.sendCustomPacket(userId, loginFailedNotLoggedViaDiscord);
       return;
     }
 
-    // Handle Discord authentication validation
-    (async () => {
-      try {
-        const session = gameData.session;
-        const guidBeforeAsyncOp = ctx.svr.getUserGuid(userId);
+    const accessToken = gameData.accessToken as string | undefined;
 
-        this.log(`Received session token for user ${userId}: ${session?.substring(0, 10)}...`);
+    // Require Discord access token. Identity (Discord id, username, etc.) comes only from Discord API response, not from client.
+    if (!accessToken || typeof accessToken !== "string" || accessToken.trim() === "") {
+      this.log(`No or empty accessToken in gameData for user ${userId}`);
+      ctx.svr.sendCustomPacket(userId, loginFailedNotLoggedViaDiscord);
+      ctx.svr.setEnabled(userId, false);
+      return;
+    }
 
-        // For session-based auth, we trust the session token from the launcher
-        // The launcher already validated the Discord OAuth
-        if (!session || typeof session !== 'string') {
-          this.log(`Invalid or missing session token for user ${userId}`);
+    this.handleLoginWithAccessToken(userId, accessToken.trim(), ctx);
+  }
+
+  /**
+   * Validate Discord access token with Discord API, then use verified identity + profiles.json (reference: skyrim-roleplay/skymp).
+   */
+  private handleLoginWithAccessToken(userId: number, accessToken: string, ctx: SystemContext): void {
+    const guidBeforeAsyncOp = ctx.svr.getUserGuid(userId);
+
+    axios
+      .get<{ id: string; username?: string; discriminator?: string; avatar?: string }>(
+        "https://discord.com/api/v10/users/@me",
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          timeout: 5000,
+        }
+      )
+      .then((response) => {
+        const userData = response.data;
+        const discordIdFromApi = userData.id;
+
+        if (!discordIdFromApi) {
+          this.log(`Discord API did not return user id for user ${userId}`);
           ctx.svr.sendCustomPacket(userId, loginFailedNotLoggedViaDiscord);
           return;
         }
 
-        // Extract user info from gameData if available
-        const masterApiId = content["gameData"]?.masterApiId;
-        const discordUsername = content["gameData"]?.discordUsername;
-        const discordDiscriminator = content["gameData"]?.discordDiscriminator;
-        const discordAvatar = content["gameData"]?.discordAvatar;
-
-        this.log(`User ${userId} login details - masterApiId: ${masterApiId}, username: ${discordUsername}`);
-
-        const guidAfterAsyncOp = ctx.svr.isConnected(userId) ? ctx.svr.getUserGuid(userId) : "<disconnected>";
-
-        if (guidBeforeAsyncOp !== guidAfterAsyncOp) {
+        if (ctx.svr.isConnected(userId) && ctx.svr.getUserGuid(userId) !== guidBeforeAsyncOp) {
           this.log(`User ${userId} changed guid during async operation`);
-          throw new Error("Guid mismatch after async operation");
+          return;
         }
 
-        // Create user profile from session data
-        const profile: UserProfile = {
-          id: masterApiId?.toString() || userId.toString(),
-          discordId: masterApiId?.toString() || userId.toString(),
-          username: discordUsername || `User${userId}`,
-          discriminator: discordDiscriminator || "0000",
-          avatar: discordAvatar || null
-        };
+        // Set masterApiId from Discord id (string from API; use as-is for identity)
+        const masterApiId = discordIdFromApi;
 
-        // Get Discord roles (if bot token is available and we have Discord ID)
+        // Ensure profiles.json exists and get or create stable profileId
+        const profileId = this.getOrCreateProfileId(masterApiId, userId);
+        this.log(`Verified Discord user ${masterApiId}. Using profileId: ${profileId}`);
+
+        // Fetch Discord roles (if bot token and guild are configured)
         const roles: string[] = [];
-        if (this.discordGuildId && this.discordBotToken && masterApiId) {
-          try {
-            // Check if user has whitelist role using string Discord ID
-            const hasWhitelistRole = await this.checkUserHasWhitelistRole(masterApiId.toString());
-            if (!hasWhitelistRole) {
-              this.log(`User ${discordUsername || 'unknown'} (${masterApiId}) does not have whitelist role`);
-              ctx.svr.sendCustomPacket(userId, loginFailedNotInTheDiscordServer);
-              return;
-            }
-
-            const userRoles = await this.getUserDiscordRoles(masterApiId.toString());
-            roles.push(...userRoles);
-          } catch (error) {
-            this.log(`Failed to get Discord roles for ${discordUsername || 'unknown'}:`, error);
-          }
+        if (this.discordGuildId && this.discordBotToken) {
+          this.getUserDiscordRoles(masterApiId)
+            .then((userRoles) => {
+              roles.push(...userRoles);
+              if (this.whitelistRoleId && !roles.includes(this.whitelistRoleId)) {
+                this.log(`User ${masterApiId} does not have whitelist role`);
+                ctx.svr.sendCustomPacket(userId, loginFailedNotInTheDiscordServer);
+                return;
+              }
+              this.emit(ctx, "loginSuccess", userId, profileId, roles, masterApiId);
+            })
+            .catch((err) => {
+              this.log(`Failed to get Discord roles for ${masterApiId}:`, err);
+              this.emit(ctx, "loginSuccess", userId, profileId, roles, masterApiId);
+            });
+          return;
         }
 
-        this.log(`User ${userId} authenticated successfully as ${discordUsername || 'unknown'}#${discordDiscriminator || '0000'}`);
-        // Use Discord ID as profileId (converted to number) for character management, keep discordId as string for API calls
-        const profileIdForCharacterManager = masterApiId ? parseInt(masterApiId.toString(), 10) : userId;
-        this.emit(ctx, "loginSuccess", userId, profileIdForCharacterManager, roles, profile.discordId);
-
-      } catch (error) {
-        this.log(`Login error for user ${userId}:`, error);
+        this.emit(ctx, "loginSuccess", userId, profileId, roles, masterApiId);
+      })
+      .catch((error) => {
+        this.log(`Discord token validation failed for user ${userId}:`, error?.message || error);
         ctx.svr.sendCustomPacket(userId, loginFailedNotLoggedViaDiscord);
-      }
-    })();
-  }
-
-  private readAuthDataFromDisk(): AuthData | null {
-    try {
-      const authFilePath = path.join(process.cwd(), '.psc', 'auth.json');
-
-      if (!fs.existsSync(authFilePath)) {
-        return null;
-      }
-
-      const authFileContent = fs.readFileSync(authFilePath, 'utf8');
-      return JSON.parse(authFileContent) as AuthData;
-
-    } catch (error) {
-      console.error('Failed to read auth data from disk:', error);
-      return null;
-    }
-  }
-
-  private async validateDiscordToken(accessToken: string): Promise<boolean> {
-    try {
-      const response = await axios.get('https://discord.com/api/v10/users/@me', {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        },
-        timeout: 5000
+        ctx.svr.setEnabled(userId, false);
       });
-
-      return response.status === 200;
-    } catch (error) {
-      return false;
-    }
   }
 
   private async checkUserHasWhitelistRole(userId: string): Promise<boolean> {
@@ -244,6 +207,44 @@ export class LoginDiscord implements System {
       console.error('Failed to get Discord roles:', error);
       return [];
     }
+  }
+
+  /**
+   * Returns a stable integer profileId for the given Discord user ID.
+   * Persists mapping in profiles.json so the same user always gets the same profileId
+   * (avoids 64-bit Discord IDs overflowing int32 / JS number precision and ensures
+   * character list lookups find saved characters on re-login).
+   */
+  private getOrCreateProfileId(discordId: string, fallbackUserId: number): number {
+    if (!discordId) {
+      return fallbackUserId;
+    }
+    const key = discordId.toString();
+    let data: ProfilesData;
+    if (!fs.existsSync(this.profilesFilePath)) {
+      data = { lastIndex: 0, users: {} };
+      fs.writeFileSync(this.profilesFilePath, JSON.stringify(data, null, 2), "utf8");
+    } else {
+      const raw = fs.readFileSync(this.profilesFilePath, "utf8");
+      data = JSON.parse(raw) as ProfilesData;
+      if (!data.users) {
+        data.users = {};
+      }
+      if (typeof data.lastIndex !== "number") {
+        data.lastIndex = 0;
+      }
+    }
+    if (data.users[key] !== undefined) {
+      const profileId = data.users[key];
+      this.log(`Using stored profileId ${profileId} for Discord user ${key}`);
+      return profileId;
+    }
+    data.lastIndex += 1;
+    const profileId = data.lastIndex;
+    data.users[key] = profileId;
+    fs.writeFileSync(this.profilesFilePath, JSON.stringify(data, null, 2), "utf8");
+    this.log(`Assigned new profileId ${profileId} for Discord user ${key}`);
+    return profileId;
   }
 
   private emit(ctx: SystemContext, eventName: string, ...args: unknown[]) {

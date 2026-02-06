@@ -4,4 +4,6 @@ export interface MasterApiAuthStatus {
     discordUsername: string | null;
     discordDiscriminator: string | null;
     discordAvatar: string | null;
+    /** Optional Discord OAuth access token for server-side validation. */
+    accessToken?: string;
 }

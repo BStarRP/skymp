@@ -4,7 +4,9 @@ export interface RemoteAuthGameData {
   discordUsername: string | null;
   discordDiscriminator: string | null;
   discordAvatar: string | null;
-};
+  /** Optional Discord OAuth access token; when sent to server, server validates with Discord API for secure identity. */
+  accessToken?: string;
+}
 
 export interface LocalAuthGameData {
   accessToken: string;

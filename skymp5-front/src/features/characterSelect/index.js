@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { FrameButton } from '../../components/FrameButton/FrameButton';
 import { SkyrimFrame } from '../../components/SkyrimFrame/SkyrimFrame';
 import './styles.scss';
 
@@ -9,10 +8,10 @@ const CharacterSelect = ({ send }) => {
 
   useEffect(() => {
     console.log('[CharacterSelect] Component mounted, setting up listeners');
-    
+
     const handleCharacterList = (event) => {
       console.log('[CharacterSelect] ✅ Received character list event:', event.detail);
-      
+
       // If detail is null, clear the data (player spawned)
       if (event.detail === null) {
         console.log('[CharacterSelect] Clearing character data (player spawned)');
@@ -20,7 +19,7 @@ const CharacterSelect = ({ send }) => {
         setError(null);
         return;
       }
-      
+
       setCharacterData(event.detail);
       setError(null);
     };
@@ -53,24 +52,24 @@ const CharacterSelect = ({ send }) => {
 
   const handleSelectCharacter = (visibleId) => {
     console.log('[CharacterSelect] 🎮 Selecting character:', visibleId);
-    window.skyrimPlatform.sendMessage('characterSelect_select', visibleId);
+    window.skyrimPlatform.sendMessage('selectCharacter', visibleId);
   };
 
   const handleCreateCharacter = () => {
     console.log('[CharacterSelect] ➕ Creating new character');
-    window.skyrimPlatform.sendMessage('characterSelect_create');
+    window.skyrimPlatform.sendMessage('createCharacter');
   };
 
   const handleDeleteCharacter = (visibleId, name) => {
     if (window.confirm(`Are you sure you want to delete character "${name}"?`)) {
       console.log('[CharacterSelect] 🗑️ Deleting character:', visibleId, name);
-      window.skyrimPlatform.sendMessage('characterSelect_delete', visibleId);
+      window.skyrimPlatform.sendMessage('deleteCharacter', visibleId);
     }
   };
 
   const handleBackToLogin = () => {
     console.log('[CharacterSelect] ⬅️ Back to login');
-    window.skyrimPlatform.sendMessage('characterSelect_back');
+    window.skyrimPlatform.sendMessage('backToLogin');
   };
 
   if (!characterData) {
@@ -104,20 +103,20 @@ const CharacterSelect = ({ send }) => {
                   <p>{char.isFemale ? 'Female' : 'Male'}</p>
                 </div>
                 <div className="character-actions">
-                  <FrameButton
-                    text="Select"
-                    variant="DEFAULT"
-                    width={180}
-                    height={48}
+                  <button
+                    type="button"
+                    className="skyrim-button character-select-btn"
                     onClick={() => handleSelectCharacter(char.visibleId)}
-                  />
-                  <FrameButton
-                    text="Delete"
-                    variant="DEFAULT"
-                    width={180}
-                    height={48}
+                  >
+                    Select
+                  </button>
+                  <button
+                    type="button"
+                    className="skyrim-button character-select-btn character-select-btn--delete"
                     onClick={() => handleDeleteCharacter(char.visibleId, char.name)}
-                  />
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
             ))}
@@ -125,24 +124,24 @@ const CharacterSelect = ({ send }) => {
 
           {characterData.currentCount < characterData.maxSlots && (
             <div className="btn-create-wrapper">
-              <FrameButton
-                text="Create New Character"
-                variant="DEFAULT"
-                width={384}
-                height={56}
+              <button
+                type="button"
+                className="skyrim-button character-select-btn character-select-btn--create"
                 onClick={handleCreateCharacter}
-              />
+              >
+                Create New Character
+              </button>
             </div>
           )}
 
           <div className="btn-back-wrapper">
-            <FrameButton
-              text="Go Back"
-              variant="DEFAULT"
-              width={242}
-              height={48}
+            <button
+              type="button"
+              className="skyrim-button character-select-btn character-select-btn--back"
               onClick={handleBackToLogin}
-            />
+            >
+              Go Back
+            </button>
           </div>
         </div>
       </div>

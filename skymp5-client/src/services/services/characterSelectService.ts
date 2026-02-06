@@ -19,12 +19,12 @@ interface CharacterListData {
   currentCount: number;
 }
 
-// Events used on both client and browser side
+// Events used on both client and browser side (backToLogin shared with AuthService)
 const events = {
-  selectCharacter: 'characterSelect_select',
-  createCharacter: 'characterSelect_create',
-  deleteCharacter: 'characterSelect_delete',
-  backToLogin: 'characterSelect_back',
+  selectCharacter: 'selectCharacter',
+  createCharacter: 'createCharacter',
+  deleteCharacter: 'deleteCharacter',
+  backToLogin: 'backToLogin',
 };
 
 export class CharacterSelectService extends ClientListener {
@@ -99,7 +99,7 @@ export class CharacterSelectService extends ClientListener {
     // Hide character select screen when player spawns in world
     if (this.characterSelectActive) {
       logTrace(this, `Player spawned, hiding character select screen`);
-      
+
       const clearScript = `
         if (window.skymp) {
           window.skymp.characterSelect = null;
@@ -108,7 +108,7 @@ export class CharacterSelectService extends ClientListener {
         window.dispatchEvent(new CustomEvent('skymp:characterList', { detail: null }));
       `;
       this.sp.browser.executeJavaScript(clearScript);
-      
+
       this.characterSelectActive = false;
     }
   }
@@ -179,10 +179,10 @@ export class CharacterSelectService extends ClientListener {
 
   private handleBackToLogin(): void {
     logTrace(this, `Back to login - returning to fresh auth screen`);
-    
+
     // Set flag to prevent auto-reconnect in authService
     this.resetAuthState = true;
-    
+
     // Clear character select data
     const clearScript = `
       if (window.skymp) {
@@ -192,13 +192,15 @@ export class CharacterSelectService extends ClientListener {
       window.dispatchEvent(new CustomEvent('skymp:characterList', { detail: null }));
     `;
     this.sp.browser.executeJavaScript(clearScript);
-    
+
     this.characterSelectActive = false;
-    
-    // Close connection and ensure browser stays visible for auth screen
-    this.controller.lookupListener(NetworkingService).close();
-    
-    // Keep browser visible for auth UI
+
+    // Prevent auto-reconnect when user chose to go back to login
+    const networkingService = this.controller.lookupListener(NetworkingService);
+    networkingService.setSuppressReconnect(true);
+    networkingService.close();
+
+    // Keep browser visible so auth UI is shown
     this.sp.browser.setVisible(true);
     this.sp.browser.setFocused(true);
   }

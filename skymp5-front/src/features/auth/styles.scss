@@ -1,0 +1,282 @@
+.auth-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  pointer-events: auto;
+}
+
+.auth-wrapper {
+  position: relative;
+  width: 420px;
+  height: 560px;
+  overflow: visible;
+}
+
+.auth-close-button {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 32px;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(157, 158, 158, 0.5);
+  color: rgba(157, 158, 158, 0.75);
+  font-size: 24px;
+  font-family: Arial, sans-serif;
+  cursor: pointer;
+  z-index: 100;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  padding: 0;
+  line-height: 1;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.8);
+    border-color: rgba(255, 255, 255, 0.8);
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.auth-close-button {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 32px;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(157, 158, 158, 0.5);
+  color: rgba(157, 158, 158, 0.75);
+  font-size: 24px;
+  font-family: Arial, sans-serif;
+  cursor: pointer;
+  z-index: 100;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  padding: 0;
+  line-height: 1;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.8);
+    border-color: rgba(255, 255, 255, 0.8);
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.auth-close-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(157, 158, 158, 0.5);
+  color: rgba(157, 158, 158, 0.75);
+  font-size: 24px;
+  font-family: Arial, sans-serif;
+  cursor: pointer;
+  z-index: 100;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  padding: 0;
+  line-height: 1;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.8);
+    border-color: rgba(255, 255, 255, 0.8);
+    color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+.auth-header-title {
+  position: absolute;
+  top: 32px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: white;
+  font-family: 'Bankir-Retro', serif;
+  font-size: 28px;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.auth-content {
+  position: absolute;
+  top: 100px;
+  left: 60px;
+  right: 60px;
+  bottom: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  z-index: 50;
+  pointer-events: auto;
+}
+
+.auth-user-info {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.auth-spacer {
+  flex: 1;
+  min-height: 40px;
+}
+
+.auth-user-label {
+  font-family: 'Bankir-Retro', serif;
+  font-size: 14px;
+  color: rgba(157, 158, 158, 0.75);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.auth-user-name {
+  font-family: 'Bankir-Retro', serif;
+  font-size: 20px;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: normal;
+}
+
+.auth-status {
+  width: 100%;
+  flex: 0 0 80px;
+  min-height: 0;
+  height: 80px;
+  max-height: 80px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  text-align: center;
+  font-family: 'Bankir-Retro', serif;
+  font-size: 14px;
+  color: rgba(157, 158, 158, 0.75);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  line-height: 1.35;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  box-sizing: border-box;
+  word-break: break-word;
+}
+
+.auth-status--error {
+  color: #e74c3c;
+}
+
+.auth-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+  position: relative;
+  z-index: 100;
+  pointer-events: auto;
+
+  > * {
+    position: relative;
+    z-index: 100;
+    pointer-events: auto;
+  }
+}
+
+.skyrim-button {
+  width: 320px;
+  height: 56px;
+  font-family: 'Bankir-Retro', serif;
+  font-size: 20px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: rgba(157, 158, 158, 0.75);
+  background: linear-gradient(180deg, rgba(40, 40, 40, 0.9) 0%, rgba(20, 20, 20, 0.9) 100%);
+  border: 2px solid rgba(100, 100, 100, 0.8);
+  border-radius: 0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 
+              inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+              0 2px 4px rgba(0, 0, 0, 0.5);
+
+  &:hover:not(:disabled) {
+    color: rgba(255, 255, 255, 0.95);
+    background: linear-gradient(180deg, rgba(60, 60, 60, 0.9) 0%, rgba(35, 35, 35, 0.9) 100%);
+    border-color: rgba(150, 150, 150, 0.9);
+    transform: scale(1.02);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.auth-footer {
+  margin-top: auto;
+  width: 100%;
+  padding-top: 24px;
+  border-top: 1px solid rgba(157, 158, 158, 0.2);
+}
+
+.auth-footer-links {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.auth-link {
+  font-family: 'Bankir-Retro', serif;
+  font-size: 14px;
+  color: rgba(157, 158, 158, 0.75);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: color 0.15s ease;
+}
+
+.auth-link:hover:not(:disabled) {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.auth-link:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.auth-link-separator {
+  color: rgba(157, 158, 158, 0.5);
+  font-size: 12px;
+}
